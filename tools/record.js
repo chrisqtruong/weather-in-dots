@@ -1,41 +1,57 @@
+// Records the demo clip and stills from saved data, with a fake clock so every frame is exact.
+// Needs: npm i playwright, the page served on localhost:4322, and data/houston-temp.json
+// (an Open-Meteo archive response for Houston, daily temperature_2m_mean, 1940 on).
 const { chromium } = require('playwright');
 const fs = require('fs');
 const P = { name: 'Houston', admin: 'Texas', country: 'United States', lat: 29.7633, lon: -95.3633 };
+const json = { 'access-control-allow-origin': '*', 'content-type': 'application/json' };
+
 (async () => {
   const b = await chromium.launch();
-  const route = async ctx => ctx.route(/archive-api|rainviewer|arcgisonline/, r => r.fulfill({ path: 'data/houston-temp.json', headers: { 'access-control-allow-origin': '*', 'content-type': 'application/json' } }));
-  const init = scale => ([p, s]) => { localStorage['wd:place'] = JSON.stringify(p); localStorage['wd:metric'] = '"temp"'; localStorage['wd:scale'] = JSON.stringify(s); localStorage['wd:units'] = '"us"'; };
+  const open = async (opts, prefs) => {
+    const ctx = await b.newContext(opts);
+    await ctx.route(/archive-api/, r => r.fulfill({ path: 'data/houston-temp.json', headers: json }));
+    await ctx.route(/ncei\.noaa\.gov/, r => r.fulfill({ path: 'media/planet-noaa.json', headers: json, status: 404 }));
+    await ctx.route(/rainviewer|arcgisonline/, r => r.abort());
+    await ctx.addInitScript(([p, prefs]) => {
+      localStorage['wd:place'] = JSON.stringify(p);
+      for (const [k, v] of Object.entries({ metric: 'temp', units: 'us', quiet: false, ...prefs })) localStorage['wd:' + k] = JSON.stringify(v);
+    }, [P, prefs]);
+    return ctx;
+  };
 
-  // clean stills of the mosaic itself
-  for (const scheme of ['dark', 'light']) {
-    const ctx = await b.newContext({ viewport: { width: 1400, height: 900 }, deviceScaleFactor: 2, colorScheme: scheme });
-    await route(ctx); await ctx.addInitScript(init(), [P, 'weeks']);
-    const pg = await ctx.newPage(); await pg.goto('http://localhost:4322/'); await pg.waitForTimeout(2500);
-    await pg.addStyleTag({ content: '.zoom{display:none!important}' }); await pg.waitForTimeout(200);
-    await pg.locator('#stage').screenshot({ path: `mosaic-houston-${scheme}.png` });
+  // stills
+  for (const [name, prefs, scheme] of [
+    ['stripes-houston-dark', { scale: 'years', lens: 'change', render: 'field' }, 'dark'],
+    ['stripes-houston-light', { scale: 'years', lens: 'change', render: 'field' }, 'light'],
+    ['weeks-houston-dark', { scale: 'weeks', lens: 'weather', render: 'dots' }, 'dark'],
+  ]) {
+    const ctx = await open({ viewport: { width: 1400, height: 900 }, deviceScaleFactor: 2, colorScheme: scheme }, prefs);
+    const pg = await ctx.newPage(); await pg.goto('http://localhost:4322/'); await pg.waitForTimeout(3000);
+    await pg.addStyleTag({ content: '.zoom{display:none!important}' }); await pg.waitForTimeout(300);
+    await pg.locator('#stage').screenshot({ path: `media/${name}.png` });
     await ctx.close();
   }
 
-  // the clip: weeks, months, years, each drawing in
-  const ctx = await b.newContext({ viewport: { width: 1120, height: 700 }, deviceScaleFactor: 1, colorScheme: 'dark' });
-  await route(ctx); await ctx.addInitScript(init(), [P, 'weeks']);
+  // the clip
+  fs.rmSync('frames', { recursive: true, force: true }); fs.mkdirSync('frames');
+  const ctx = await open({ viewport: { width: 1120, height: 700 }, deviceScaleFactor: 1, colorScheme: 'dark' }, { scale: 'weeks', lens: 'weather', render: 'field' });
   const pg = await ctx.newPage();
-  await pg.clock.install({ time: new Date('2026-10-04T12:00:00') });
+  await pg.clock.install({ time: new Date('2026-10-05T12:00:00') });
   await pg.goto('http://localhost:4322/');
-  await pg.waitForTimeout(1500);
-  await pg.clock.pauseAt(new Date('2026-10-04T12:10:00'));           // let the data load with the clock paused
+  await pg.waitForTimeout(2000);
+  await pg.clock.pauseAt(new Date('2026-10-05T12:10:00'));
   await pg.evaluate(() => document.fonts.ready);
-  let n = 0; const FPS = 15, dt = 1000 / FPS;
+  let n = 0; const dt = 1000 / 15;
   const shoot = async ms => { for (let t = 0; t < ms; t += dt) { await pg.clock.runFor(dt); await pg.screenshot({ path: `frames/${String(n++).padStart(4, '0')}.png` }); } };
-  const go = async s => { await pg.click(`#scales [data-k=${s}]`); await pg.waitForTimeout(300); };
-  // restart the weeks drawing from blank
-  await go('months'); await go('weeks');
-  await shoot(1400);
-  await pg.mouse.move(870, 330); await shoot(300);
-  await pg.mouse.move(905, 335); await shoot(1200);
-  await pg.mouse.move(1110, 690); await go('months'); await shoot(1200);
-  await go('years'); await shoot(1100);
-  await pg.mouse.move(700, 470); await shoot(1400);
+  const click = async sel => { await pg.click(sel); await pg.waitForTimeout(300); };
+  await click('#scales [data-k=months]'); await click('#scales [data-k=weeks]');
+  await shoot(1500);                                         // the weather, drawing in
+  await click('#lens [data-k=change]'); await shoot(1700);   // melts into change from normal
+  await click('#scales [data-k=years]'); await shoot(1700);  // warming stripes
+  await pg.mouse.move(1010, 330); await shoot(1100);
+  await pg.mouse.move(1110, 690);
+  await click('#render [data-k=dots]'); await shoot(1500);   // the same, as dots
   console.log('frames', n);
   await b.close();
 })();

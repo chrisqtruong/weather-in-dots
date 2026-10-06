@@ -1,22 +1,27 @@
 # weather, in dots
 
-Eighty-six years of weather for any place on earth, one dot at a time.
+Eighty-six years of weather for any place on earth, and how far it has drifted from normal.
 
-![Houston's temperature, one dot per week since 1940, drawing in, then by month and by year](media/demo.gif)
+![Houston since 1940: weekly temperatures melt into their change from normal, then become warming stripes, then dots](media/demo.gif)
 
 **Try it: [chrisqtruong.github.io/weather-in-dots](https://chrisqtruong.github.io/weather-in-dots/)**
 
-Search for a place, pick one of twelve measures, and the weather shows up as a field of coloured dots: one per hour for the past year, or one per day, week, month or year going back to 1940. Zoom in until each dot is a single afternoon. Zoom out until a whole decade is a row of ten. Hover over a dot to read its number.
+Search for a place and pick one of twelve measures. Every hour of the past year, or every day, week, month or year since 1940, becomes a patch of colour. You can zoom from a single afternoon out to the whole record.
 
-There's also a **radar** view: the last two hours of rain, drawn as dots on a quiet, labelled map, looping like a doppler.
+- **weather / change.** *Weather* colours each cell by the value itself. *Change* colours it by how far it sat from the same time of year in 1951–1980, the baseline NASA uses for its global temperature record. One line underneath sums it up, for example *2016–2025: +1.7°F against 1951–1980*.
+- **years as warming stripes.** One column per year, after the climate scientist [Ed Hawkins](https://showyourstripes.info/).
+- **field / dots.** *Field* lets neighbouring cells bleed into each other like pigment, so slow patterns show through the week-to-week noise. It drifts very slowly and has a fine print grain. *Dots* shows every value exactly, as hand-drawn dots.
+- **the planet.** The hairline across the top of the page is the whole Earth, every year since 1850, from NOAA. Hover over it to read a year.
+- **quiet.** When the pointer rests, the words fade and only the colour is left.
+- **radar.** The last two hours of rain, drawn as dots on a quiet, labelled map.
+
+| Houston, one stripe per year, against 1951–1980 | |
+|---|---|
+| ![Houston warming stripes, dark](media/stripes-houston-dark.jpg) | ![Houston warming stripes, light](media/stripes-houston-light.jpg) |
 
 ## Why
 
-I wanted something calm to look at that still tells the truth. Laid out like this, the seasons look like weather, and the changes underneath them look like climate: summers stretching into October, warm years piling up since 2010. Those changes reach everyone, but not equally. Heat, drought and flooding fall hardest on poorer neighbourhoods and countries, and on the people who did least to cause them.
-
-| Houston, one dot per week | |
-|---|---|
-| ![Houston weekly temperature, dark](media/houston-weeks-dark.png) | ![Houston weekly temperature, light](media/houston-weeks-light.png) |
+Data often says the most when you can watch it over time. One hot week is just weather. Eighty-six years of weeks side by side start to tell a story.
 
 ## The twelve measures
 
@@ -26,6 +31,7 @@ Each has its own colour ramp. Colours stretch across each place's own range, so 
 
 ## Where the data comes from
 
+- **The planet:** [NOAA NCEI Climate at a Glance](https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series), global land and ocean temperature departures since 1850. A saved copy (`media/planet-noaa.json`) is used if NOAA can't be reached.
 - **History:** [ERA5](https://www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5), the reanalysis from the European Centre for Medium-Range Weather Forecasts for the [Copernicus Climate Change Service](https://climate.copernicus.eu/). It rebuilds every hour since 1940 from stations, balloons, ships and satellites, on a grid about 25 km across. Served free by [Open-Meteo](https://open-meteo.com/).
 - **Radar:** national weather radars, combined by [RainViewer](https://www.rainviewer.com/).
 - **Map:** [Esri](https://www.esri.com/)'s grey canvas basemap (HERE, Garmin, © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors), drawn with [Leaflet](https://leafletjs.com/).
@@ -35,7 +41,7 @@ Open-Meteo's free tier is for non-commercial use and has rate limits. Eighty-six
 
 ## Run it yourself
 
-It's plain HTML, CSS and JavaScript, with no build step and no API keys.
+It's plain HTML, CSS and JavaScript, with WebGL2 for the field. There's no build step, no framework and no API keys, and the whole app is about 80 KB before compression.
 
 ```
 git clone https://github.com/chrisqtruong/weather-in-dots.git
@@ -49,8 +55,10 @@ Then open http://localhost:4322. Any static file server works too.
 |---|---|
 | `index.html`, `style.css` | The page |
 | `app.js` | Fetching, caching, the dot grids, zoom and hover |
+| `field.js` | The field: a WebGL2 shader that blends, drifts and grains the grid |
+| `planet.js` | The planet hairline, from NOAA |
 | `radar.js` | The radar view: reads radar tiles and redraws them as dots |
-| `tools/record.js` | Records the demo clip with Playwright, from saved data |
+| `tools/record.js` | Records the demo clip and stills with Playwright and a fake clock, from saved data |
 | `tools/mkgif.swift` | Joins the recorded frames into a GIF (macOS) |
 
 ## Further reading

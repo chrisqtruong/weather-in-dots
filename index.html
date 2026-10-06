@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>weather, in dots</title>
-<meta name="description" content="Eighty-six years of weather for any place on earth, one dot at a time.">
+<meta name="description" content="Eighty-six years of weather for any place on earth, and how far it has drifted from normal.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta property="og:image" content="media/houston-weeks-dark.png">
+<meta property="og:image" content="media/stripes-houston-dark.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&display=swap" rel="stylesheet">
@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="planet" aria-label="The whole planet, 1850 to last year, coloured by how far each year sat from the 20th-century average"><canvas></canvas><span></span></div>
 <div class="app">
   <header>
     <h1><i class="mark" id="mark"></i>weather, in dots</h1>
@@ -22,6 +23,7 @@
       <ul id="results" role="listbox" hidden></ul>
     </div>
     <button id="units" class="quiet" title="Switch units"></button>
+    <button id="quietBtn" class="quiet" title="Let the words fade when you rest">quiet</button>
   </header>
 
   <nav id="metrics" aria-label="What to look at"></nav>
@@ -29,14 +31,20 @@
   <main>
     <div class="bar">
       <p id="place"></p>
+      <div id="lens" class="pair" aria-label="What the colour means">
+        <button data-k="weather" title="Colour by the weather itself">weather</button><button data-k="change" title="Colour by how far each was from 1951–1980">change</button>
+      </div>
       <div id="scales" role="tablist" aria-label="Size of each dot"></div>
     </div>
 
     <div id="stage">
+      <canvas id="gl" aria-hidden="true"></canvas>
       <canvas id="c" aria-label="Grid of dots, each coloured by the weather"></canvas>
       <div id="tip" hidden></div>
       <p id="status" hidden></p>
       <div class="zoom">
+        <span id="render" class="pair"><button data-k="dots">dots</button><button data-k="field">field</button></span>
+        <span class="sep"></span>
         <button id="zout" aria-label="Zoom out">&minus;</button>
         <button id="zin" aria-label="Zoom in">+</button>
         <button id="zfit" class="word">fit</button>
@@ -46,6 +54,7 @@
     <div class="legend">
       <span id="lo"></span><span id="ramp" aria-hidden="true"></span><span id="hi"></span>
       <p id="caption"></p>
+      <p id="story"></p>
     </div>
   </main>
 
@@ -69,6 +78,9 @@
       <section>
         <h3>how to read it</h3>
         <p>Each dot is one hour, day, week, month or year. Colours stretch across each place&rsquo;s own range, so a deep orange in Fairbanks is not the same heat as one in Houston. Hover or tap a dot for its number.</p>
+        <p><i>Change</i> colours each cell by how far it sat from the same time of year in 1951–1980, the baseline NASA uses for its global temperature record. Blue and ochre are below normal; red and teal above. The years view draws them as warming stripes, after the climate scientist Ed Hawkins.</p>
+        <p><i>Field</i> lets neighbouring cells bleed into one another, like pigment, so slow patterns show through the day-to-day noise. Switch to <i>dots</i> for the exact values. <i>Quiet</i> lets the words fade when you rest.</p>
+        <p>The hairline across the top is the whole planet, every year since 1850, from NOAA&rsquo;s <a href="https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series" target="_blank" rel="noopener">National Centers for Environmental Information</a>.</p>
         <p>The radar view shows only rain, whatever measure you pick, and only where countries share their radar: most of North America, Europe, Japan and Australia, and parts of elsewhere.</p>
         <p>A reanalysis describes a patch of sky about 25&nbsp;km across, so a dot is the weather of a neighbourhood, not of one thermometer. The newest five days are still being checked and are left out.</p>
       </section>
@@ -83,6 +95,8 @@
 </dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="radar.js"></script>
+<script src="field.js"></script>
+<script src="planet.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
