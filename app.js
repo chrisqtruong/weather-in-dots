@@ -337,7 +337,12 @@ function dailyGrid(json, m, scale) {
     describe: (x, y) => `${MONTHS[x]} ${Y0 + y}`,
     caption: `each dot is one month (${kind}) · ${span}`,
   };
-  // years: warming stripes, one column per year, repeated down the page
+  // years: warming stripes, one column per year, repeated down the page; a year still under way is left off
+  let ny2 = ny; while (ny2 > 1 && !(vals[ny2 - 1] === vals[ny2 - 1])) ny2--;
+  if (ny2 < ny) return dailyStripes(vals, ny2, Y0, json, m, kind, `${Y0} to ${Y0 + ny2 - 1}`);
+  return dailyStripes(vals, ny, Y0, json, m, kind, span);
+}
+function dailyStripes(vals, ny, Y0, json, m, kind, span) {
   const rows = Math.max(8, Math.round(ny * 0.42)), stripes = new Float32Array(ny * rows);
   for (let r = 0; r < rows; r++) for (let y = 0; y < ny; y++) stripes[r * ny + y] = vals[y];
   return {
@@ -909,41 +914,48 @@ function inkFor(o, x, y, w, h) {
   return { c, shade, avg };
 }
 
-function caption(o) {
-  const w = o.canvas.width, h = o.canvas.height, m = metric();
-  let f = Math.max(14, Math.min(w, h) * 0.034, Math.max(w, h) * 0.011);
-  const p = state.place, lines = [];
-  lines.push({ t: p.name, size: 1.55, weight: 500 });
-  const where = [p.admin, p.country].filter(Boolean).join(', ');
-  if (where) lines.push({ t: where, size: 0.85, alpha: 0.8 });
-  lines.push({ t: $('#gist').textContent || m.name, size: 0.95, italic: true, gap: 0.45 });
-  const st = $('#story').textContent;
-  if (st) lines.push({ t: st, size: 0.85 });
-  lines.push({ t: 'weather, in dots · ERA5, ECMWF / Copernicus', size: 0.68, alpha: 0.7, gap: 0.5 });
-  const font = (l, F) => `${l.italic ? 'italic ' : ''}${l.weight || 400} ${l.size * F}px Newsreader, Georgia, serif`;
-  // shrink until the block fits comfortably
-  const widest = F => Math.max(...lines.map(l => { o.font = font(l, F); return o.measureText(l.t).width; }));
-  while (f > 10 && widest(f) > w * 0.78) f *= 0.92;
-  const pad = Math.max(16, Math.min(w, h) * 0.045);
-  const heights = lines.map(l => l.size * f * 1.32 + (l.gap || 0) * f), total = heights.reduce((a, b) => a + b, 0), bw = widest(f);
-  const right = w - pad, top = h - pad - total;
-  const ink = inkFor(o, right - bw, top, bw, total);
-  // a soft wash of the picture's own colour behind the type, so busy stripes don't fight it
-  // an ellipse that fades to nothing, so there is no edge anywhere
-  o.save();
-  o.translate(right - bw / 2, top + total / 2); o.scale(bw * 0.95, total * 1.15);
-  const g = o.createRadialGradient(0, 0, 0, 0, 0, 1);
-  g.addColorStop(0, ink.avg + '0.5)'); g.addColorStop(0.55, ink.avg + '0.3)'); g.addColorStop(1, ink.avg + '0)');
-  o.fillStyle = g; o.beginPath(); o.arc(0, 0, 1, 0, TAU); o.fill();
-  o.restore();
+// Very wide or very tall views go on a paper mat, like a matted print, so the picture keeps a
+// sensible shape and the signature has somewhere quiet to sit.
+function matted(art) {
+  const w = art.width, h = art.height, r = w / h, MAX = 3;
+  if (r <= MAX && r >= 1 / MAX) return { out: art, pad: null };
+  const m = Math.round(Math.max(w, h) * 0.06);
+  const W2 = r > MAX ? w + 2 * m : Math.max(w + 2 * m, Math.round((h + 2 * m) / MAX));
+  const H2 = r > MAX ? Math.max(h + 2 * m, Math.round((w + 2 * m) / MAX)) : h + 2 * m;
+  const out = document.createElement('canvas'); out.width = W2; out.height = H2;
+  const o = out.getContext('2d');
+  o.fillStyle = mode() === 'dark' ? '#171c28' : '#f4f1ea'; o.fillRect(0, 0, W2, H2);
+  const x = Math.round((W2 - w) / 2), y = Math.round((H2 - h) / 2.25);   // a little above centre, as mats are cut
+  o.drawImage(art, x, y);
+  return { out, pad: { x, y, w, h } };
+}
+
+// The signature: two small lines in the corner, the way a print is signed. Tinted from what's beneath.
+function caption(o, onMat) {
+  const w = o.canvas.width, h = o.canvas.height, m = metric(), p = state.place;
+  const f = Math.max(11, Math.min(Math.max(w, h) * 0.0085, Math.min(w, h) * 0.05));
+  const span = ((grid.caption.split(' · ')[1] || '').match(/\d{4}/g) || []);
+  const years = span.length ? (span[0] === span[span.length - 1] ? span[0] : `${span[0]}–${span[span.length - 1]}`) : '';
+  const l1 = [p.name, p.admin || p.country].filter(Boolean).join(', ');
+  const l2 = [m.name + (changing() ? `, against its ${BASE[0]}–${BASE[1]} normal` : ''), years, 'ERA5'].filter(Boolean).join(' · ');
+  const F1 = `400 ${f}px Newsreader, Georgia, serif`, F2 = `italic 400 ${f * 0.82}px Newsreader, Georgia, serif`;
+  o.font = F1; const w1 = o.measureText(l1).width; o.font = F2; const w2 = o.measureText(l2).width;
+  const bw = Math.max(w1, w2), lh = f * 1.35, total = lh + f * 0.82 * 1.35;
+  const pad = onMat ? { x: w - onMat.x - onMat.w, y: h - onMat.y - onMat.h } : null;
+  const right = w - (pad ? pad.x : Math.max(f * 2.2, Math.min(w, h) * 0.035));
+  // on a mat, sign just below the picture's corner; on the picture, inside its corner
+  const base = pad ? onMat.y + onMat.h + f * 1.9 : h - Math.max(f * 1.9, Math.min(w, h) * 0.035);
+  const top = pad ? base - f : base - total;
+  const ink = inkFor(o, right - bw, Math.max(0, top - f * 0.2), bw, Math.min(h - top, total + f * 0.4));
   o.textAlign = 'right'; o.textBaseline = 'alphabetic';
-  o.shadowColor = ink.shade; o.shadowBlur = f * 0.6;
-  let y = top;
-  lines.forEach((l, i) => {
-    y += heights[i];
-    o.font = font(l, f); o.fillStyle = ink.c; o.globalAlpha = l.alpha || 1;
-    o.fillText(l.t, right, y - f * 0.3);
-  });
+  o.shadowColor = ink.shade; o.shadowBlur = pad ? 0 : f * 0.45;
+  o.fillStyle = ink.c;
+  o.globalAlpha = 0.9; o.font = F1;
+  if (o.letterSpacing !== undefined) o.letterSpacing = `${(f * 0.03).toFixed(2)}px`;
+  o.fillText(l1, right, pad ? base : base - f * 0.82 * 1.35);
+  o.globalAlpha = 0.68; o.font = F2;
+  if (o.letterSpacing !== undefined) o.letterSpacing = '0px';
+  o.fillText(l2, right, pad ? base + lh : base);
   o.globalAlpha = 1; o.shadowBlur = 0;
 }
 
@@ -968,8 +980,9 @@ async function openSave() {
   saveMeta.textContent = 'preparing…'; saveImg.removeAttribute('src'); saveGo.disabled = true;
   try { await Promise.all(['400 40px Newsreader', '500 40px Newsreader', 'italic 400 40px Newsreader'].map(f => document.fonts.load(f))); } catch { /* falls back to Georgia */ }
   await new Promise(r => requestAnimationFrame(r));
-  saveCanvas = renderView();
-  caption(saveCanvas.getContext('2d'));
+  const { out, pad } = matted(renderView());
+  saveCanvas = out;
+  caption(saveCanvas.getContext('2d'), pad);
   encode();
 }
 function fileName() {

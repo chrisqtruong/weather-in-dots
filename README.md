@@ -13,7 +13,7 @@ Search for a place and pick one of twelve measures. Every hour of the past year,
 - **field / dots.** *Field* lets neighbouring cells bleed into each other like pigment, so slow patterns show through the week-to-week noise. It drifts very slowly and has a fine print grain. *Dots* shows every value exactly, as hand-drawn dots.
 - **the planet.** The hairline across the top of the page is the whole Earth, every year since 1850, from NOAA. Hover over it to read a year.
 - **quiet.** On by default. The controls step away and the picture fills the page, with only the place, one line about what you're seeing, and the summary left. You can still hover to read any value. The switch in the top-right corner says whether it's on; it (or the Q key) turns it off, and so does clicking the place name, which also opens search.
-- **save image.** The button at the top (or the S key) draws whatever you're looking at again, at about 3,600 px across, and sets the place and the numbers in the corner in a tint of the colours underneath. You get a preview with the file type (JPEG or PNG), pixel size and file size before anything downloads.
+- **save image.** The button at the top (or the S key) draws whatever you're looking at again, at about 3,600 px across, and signs it small in the corner, the way a print is signed: the place, then one italic line with the measure, the years and the source, in a tint of the colours underneath. Very wide or very tall views are set on a paper mat, like a matted print. You get a preview with the file type (JPEG or PNG), pixel size and file size before anything downloads.
 - **radar.** The last two hours of rain, drawn as dots on a quiet, labelled map.
 
 | Houston, one stripe per year, against 1951–1980 | |
@@ -22,7 +22,7 @@ Search for a place and pick one of twelve measures. Every hour of the past year,
 
 A saved image:
 
-![A saved image: Houston's warming stripes with the place and the summary set in the corner](media/saved-houston-stripes.jpg)
+![A saved image: Houston's warming stripes, signed small in the corner](media/saved-houston-stripes.jpg)
 
 ## Why
 
