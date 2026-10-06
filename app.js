@@ -675,10 +675,25 @@ const release = e => { ptrs.delete(e.pointerId); if (!ptrs.size) canvas.classLis
 canvas.addEventListener('pointerup', release);
 canvas.addEventListener('pointercancel', release);
 canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !ptrs.size) clearHover(); });
+// Trackpad: two fingers move through time, a pinch zooms. A mouse wheel zooms.
+// Each gesture keeps one meaning from start to finish, so momentum doesn't flip it halfway.
+let wheelKind = 'pan', wheelAt = 0;
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
-  const { x, y } = xy(e);
-  zoomAt(x, y, Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0022)));
+  const { x, y } = xy(e), now = performance.now();
+  if (e.ctrlKey) zoomAt(x, y, Math.exp(-e.deltaY * 0.012));          // pinch (and ctrl + wheel)
+  else {
+    if (now - wheelAt > 220) {
+      const fine = e.deltaMode === 0 && (e.deltaX !== 0 || !Number.isInteger(e.deltaY) || Math.abs(e.deltaY) < 50);
+      wheelKind = fine ? 'pan' : 'zoom';
+    }
+    if (wheelKind === 'pan') {
+      let dx = -e.deltaX, dy = -e.deltaY;
+      if (e.shiftKey && !dx) { dx = dy; dy = 0; }                      // shift + scroll goes sideways
+      pan(dx, dy);
+    } else zoomAt(x, y, Math.exp(-e.deltaY * 0.0022));
+  }
+  wheelAt = now;
   if (!tip.hidden) readAt(x, y);
 }, { passive: false });
 canvas.addEventListener('dblclick', e => { const { x, y } = xy(e); zoomAt(x, y, 1.8); });

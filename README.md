@@ -6,7 +6,7 @@ Eighty-six years of weather for any place on earth, and how far it has drifted f
 
 **Try it: [chrisqtruong.github.io/weather-in-dots](https://chrisqtruong.github.io/weather-in-dots/)**
 
-Search for a place and pick one of twelve measures. Every hour of the past year, or every day, week, month or year since 1940, becomes a patch of colour. You can zoom from a single afternoon out to the whole record.
+Search for a place and pick one of twelve measures. Every hour of the past year, or every day, week, month or year since 1940, becomes a patch of colour. You can zoom from a single afternoon out to the whole record. On a trackpad, swipe with two fingers to move through time and pinch to zoom; with a mouse, drag and scroll.
 
 - **weather / change.** *Weather* colours each cell by the value itself. *Change* colours it by how far it sat from the same time of year in 1951–1980, the baseline NASA uses for its global temperature record. One line underneath sums it up, for example *2016–2025: +1.7°F against 1951–1980*.
 - **years as warming stripes.** One column per year, after the climate scientist [Ed Hawkins](https://showyourstripes.info/).

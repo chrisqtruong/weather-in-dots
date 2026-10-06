@@ -19,7 +19,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; }
+html, body { height: 100%; margin: 0; overscroll-behavior: none; }   /* a sideways swipe moves the picture, not the browser's history */
 body {
   background: var(--bg);
   color: var(--ink);
