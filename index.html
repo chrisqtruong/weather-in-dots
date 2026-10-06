@@ -11,10 +11,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2.2.0">
 </head>
 <body>
 <div id="planet" aria-label="The whole planet, 1850 to last year, coloured by how far each year sat from the 20th-century average"><canvas></canvas><span></span></div>
+<button id="quietBtn" class="switch" role="switch" aria-checked="true" title="Quiet: just the picture. Press Q to switch."><span class="track"><i></i></span><span>quiet <b id="quietState">on</b></span></button>
 <div class="app">
   <header>
     <h1><i class="mark" id="mark"></i>weather, in dots</h1>
@@ -61,7 +62,6 @@
   <footer>
     <button id="aboutOpen" class="link">about the data</button>
     <p id="quietStory"></p>
-    <button id="quietBtn" class="switch" role="switch" aria-checked="true" title="Quiet: just the picture (Q)"><span class="track"><i></i></span>quiet</button>
   </footer>
 </div>
 
@@ -96,9 +96,9 @@
   </div>
 </dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="radar.js"></script>
-<script src="field.js"></script>
-<script src="planet.js"></script>
-<script src="app.js"></script>
+<script src="radar.js?v=2.2.0"></script>
+<script src="field.js?v=2.2.0"></script>
+<script src="planet.js?v=2.2.0"></script>
+<script src="app.js?v=2.2.0"></script>
 </body>
 </html>

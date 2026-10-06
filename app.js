@@ -162,7 +162,7 @@ function fmt(m, v, scale) {
 function fmtDelta(m, d, scale) {
   if (!(d === d)) return '—';
   const us = state.units === 'us', sg = x => (x >= 0 ? '+' : '−') + Math.abs(x);
-  const fix = (x, k) => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(k);
+  const fix = (x, k) => { const v = Math.abs(x).toFixed(k); return (+v === 0 ? '' : x > 0 ? '+' : '−') + v; };
   switch (m.unit) {
     case 'temp': return fix(us ? d * 1.8 : d, 1) + (us ? '°F' : '°C');
     case 'pct': return sg(Math.round(d)) + ' pts';
@@ -739,6 +739,7 @@ function paintChrome() {
   document.querySelectorAll('#lens button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.k === state.lens); b.disabled = state.scale === 'hours' && b.dataset.k === 'change'; });
   document.querySelectorAll('#render button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === state.render));
   $('#quietBtn').setAttribute('aria-checked', hushed());
+  $('#quietState').textContent = hushed() ? 'on' : 'off';
   document.body.classList.toggle('is-quiet', hushed());
   planet.el.dataset.units = state.units;
   document.querySelectorAll('#metrics button').forEach(b => {
