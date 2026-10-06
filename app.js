@@ -73,7 +73,7 @@ const store = {
 const state = {
   place: store.get('place', { name: 'Baltimore', admin: 'Maryland', country: 'United States', lat: 39.29038, lon: -76.61219 }),
   metric: store.get('metric', 'temp'),
-  scale: store.get('scale', 'weeks'),
+  scale: store.get('scale', 'years'),
   units: store.get('units', 'us'),
   lens: store.get('lens', 'change'),      // 'weather' shows the values; 'change' shows how far each sat from normal
   render: store.get('render', 'field'),   // 'dots' or 'field'
