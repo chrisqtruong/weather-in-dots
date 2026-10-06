@@ -77,7 +77,7 @@ const state = {
   units: store.get('units', 'us'),
   lens: store.get('lens', 'change'),      // 'weather' shows the values; 'change' shows how far each sat from normal
   render: store.get('render', 'field'),   // 'dots' or 'field'
-  quiet: store.get('quiet', false),       // hide the words when the pointer rests
+  quiet: store.get('hush', true),         // quiet: just the picture, the place, and one line
 };
 if (!METRICS.some(m => m.key === state.metric)) state.metric = 'temp';
 if (state.scale === 'map') state.scale = 'radar';
@@ -512,7 +512,7 @@ function dot(x, y, r, seed) {
   else blob(x, y, r, seed);
 }
 
-const hushed = () => state.quiet && !document.body.classList.contains('awake');
+const hushed = () => state.quiet && state.scale !== 'radar';
 function draw() {
   raf = 0;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -702,7 +702,12 @@ function fail(err, retry) {
 function updateLegend() {
   const radar = state.scale === 'radar', m = radar ? METRICS.find(x => x.key === 'rain') : metric(), b = radar ? null : bins;
   colors = rampColors(m, !radar && changing());
-  $('#story').textContent = changing() && grid && grid.json ? story(grid, m) : '';
+  $('#story').textContent = $('#quietStory').textContent = changing() && grid && grid.json ? story(grid, m) : '';
+  if (grid && !radar) {
+    const each = grid.caption.split(' · ')[0].replace(/ \((average|total)\)/, '')
+      .replace(/^each (dot|stripe) is one (\w+)/, (_, what, unit) => `one ${what} ${unit === 'hour' ? 'an' : 'a'} ${unit}`);
+    $('#gist').textContent = `${m.name} · ${each}` + (changing() ? `, against ${BASE[0]}–${BASE[1]}` : '');
+  }
   if (radar) {
     $('#lo').textContent = 'drizzle'; $('#hi').textContent = 'downpour';
     $('#ramp').innerHTML = Array.from({ length: 11 }, (_, i) => `<i style="background:${colors[Math.round(i / 10 * (NB - 1))]}"></i>`).join('');
@@ -733,8 +738,8 @@ function paintChrome() {
   document.querySelectorAll('#scales button').forEach(b => b.setAttribute('aria-selected', b.dataset.k === state.scale));
   document.querySelectorAll('#lens button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.k === state.lens); b.disabled = state.scale === 'hours' && b.dataset.k === 'change'; });
   document.querySelectorAll('#render button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === state.render));
-  $('#quietBtn').setAttribute('aria-pressed', state.quiet);
-  document.body.classList.toggle('is-quiet', state.quiet);
+  $('#quietBtn').setAttribute('aria-checked', hushed());
+  document.body.classList.toggle('is-quiet', hushed());
   planet.el.dataset.units = state.units;
   document.querySelectorAll('#metrics button').forEach(b => {
     const c = rampColors(METRICS.find(m => m.key === b.dataset.k), false);
@@ -821,19 +826,20 @@ $('#render').onclick = e => {
   state.render = b.dataset.k; store.set('render', state.render);
   paintChrome(); pushField(false); startAppear();
 };
-// quiet: once the pointer rests, the words fade and only the colour is left
-let wakeTimer = 0;
-function rouse() {
-  if (!state.quiet) return;
-  if (!document.body.classList.contains('awake')) { document.body.classList.add('awake'); requestDraw(); }
-  clearTimeout(wakeTimer);
-  wakeTimer = setTimeout(() => { document.body.classList.remove('awake'); clearHover(); requestDraw(); }, 2600);
+// quiet: a switch, not a timer. On, the controls step away and the picture fills the page;
+// you can still hover to read it. The place name brings everything back.
+function setQuiet(on) {
+  if (on && state.scale === 'radar') { state.scale = 'years'; store.set('scale', 'years'); refresh(true); }
+  state.quiet = on; store.set('hush', on);
+  stage.classList.add('settling');
+  paintChrome(); updateLegend(); clearHover(); requestDraw();
+  setTimeout(() => stage.classList.remove('settling'), 60);
 }
-['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach(t => addEventListener(t, rouse, { passive: true }));
-$('#quietBtn').onclick = () => {
-  state.quiet = !state.quiet; store.set('quiet', state.quiet);
-  document.body.classList.toggle('awake', state.quiet); paintChrome(); rouse(); requestDraw();
-};
+$('#quietBtn').onclick = () => setQuiet(!hushed());
+$('#place').onclick = () => { if (hushed()) { setQuiet(false); setTimeout(() => q.focus(), 80); } };
+addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'q' && !e.metaKey && !e.ctrlKey && !e.altKey && !/input|textarea/i.test(document.activeElement.tagName)) setQuiet(!hushed());
+});
 
 $('#units').onclick = () => {
   state.units = state.units === 'us' ? 'si' : 'us'; store.set('units', state.units);

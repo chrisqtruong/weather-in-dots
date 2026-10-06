@@ -2,7 +2,7 @@
 
 Eighty-six years of weather for any place on earth, and how far it has drifted from normal.
 
-![Houston since 1940: weekly temperatures melt into their change from normal, then become warming stripes, then dots](media/demo.gif)
+![Houston since 1940: weekly temperatures melt into their change from normal, become warming stripes, then quiet mode leaves only the picture](media/demo.gif)
 
 **Try it: [chrisqtruong.github.io/weather-in-dots](https://chrisqtruong.github.io/weather-in-dots/)**
 
@@ -12,7 +12,7 @@ Search for a place and pick one of twelve measures. Every hour of the past year,
 - **years as warming stripes.** One column per year, after the climate scientist [Ed Hawkins](https://showyourstripes.info/).
 - **field / dots.** *Field* lets neighbouring cells bleed into each other like pigment, so slow patterns show through the week-to-week noise. It drifts very slowly and has a fine print grain. *Dots* shows every value exactly, as hand-drawn dots.
 - **the planet.** The hairline across the top of the page is the whole Earth, every year since 1850, from NOAA. Hover over it to read a year.
-- **quiet.** When the pointer rests, the words fade and only the colour is left.
+- **quiet.** On by default. The controls step away and the picture fills the page, with only the place, one line about what you're seeing, and the summary left. You can still hover to read any value. The switch in the corner (or the Q key) turns it off, and so does clicking the place name, which also opens search.
 - **radar.** The last two hours of rain, drawn as dots on a quiet, labelled map.
 
 | Houston, one stripe per year, against 1951–1980 | |

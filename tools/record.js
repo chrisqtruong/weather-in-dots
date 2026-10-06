@@ -15,7 +15,7 @@ const json = { 'access-control-allow-origin': '*', 'content-type': 'application/
     await ctx.route(/rainviewer|arcgisonline/, r => r.abort());
     await ctx.addInitScript(([p, prefs]) => {
       localStorage['wd:place'] = JSON.stringify(p);
-      for (const [k, v] of Object.entries({ metric: 'temp', units: 'us', quiet: false, ...prefs })) localStorage['wd:' + k] = JSON.stringify(v);
+      for (const [k, v] of Object.entries({ metric: 'temp', units: 'us', hush: false, ...prefs })) localStorage['wd:' + k] = JSON.stringify(v);
     }, [P, prefs]);
     return ctx;
   };
@@ -51,7 +51,7 @@ const json = { 'access-control-allow-origin': '*', 'content-type': 'application/
   await click('#scales [data-k=years]'); await shoot(1700);  // warming stripes
   await pg.mouse.move(1010, 330); await shoot(1100);
   await pg.mouse.move(1110, 690);
-  await click('#render [data-k=dots]'); await shoot(1500);   // the same, as dots
+  await click('#quietBtn'); await shoot(1800);               // quiet: just the picture
   console.log('frames', n);
   await b.close();
 })();
