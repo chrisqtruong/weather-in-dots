@@ -408,7 +408,8 @@ function binsFor(g, m) {
 
 /* ───────── the canvas ───────── */
 
-const stage = $('#stage'), canvas = $('#c'), ctx = canvas.getContext('2d'), glCanvas = $('#gl');
+const stage = $('#stage'), canvas = $('#c'), glCanvas = $('#gl');
+let ctx = canvas.getContext('2d');   // swapped briefly when saving an image
 let fieldReady = false;
 try { fieldReady = Field.init(glCanvas); } catch (e) { console.warn('field unavailable', e); }
 const tip = $('#tip'), statusEl = $('#status');
@@ -522,7 +523,7 @@ function draw() {
   if (p < 1) requestDraw();
 }
 
-function drawGrid(p) {
+function drawGrid(p, bare = false) {
   const { cols, rows, tr } = L, s = L.cell * view.k, nx = grid.nx, t = THEME[mode()];
   const r = s < 4 ? s * 0.45 : s * 0.37;
   const c0 = Math.max(0, Math.floor(-view.tx / s)), c1 = Math.min(cols - 1, Math.floor((L.aw - view.tx) / s));
@@ -559,7 +560,7 @@ function drawGrid(p) {
     ctx.strokeStyle = t.ink; ctx.lineWidth = 1.2; ctx.stroke();
   }
   ctx.restore();
-  if (hushed()) return;
+  if (hushed() || bare) return;
 
   // labels along the top and down the side
   ctx.font = '13px Newsreader, Georgia, serif';
@@ -741,6 +742,7 @@ function paintChrome() {
   $('#quietBtn').setAttribute('aria-checked', hushed());
   $('#quietState').textContent = hushed() ? 'on' : 'off';
   document.body.classList.toggle('is-quiet', hushed());
+  $('#saveOpen').disabled = state.scale === 'radar';
   planet.el.dataset.units = state.units;
   document.querySelectorAll('#metrics button').forEach(b => {
     const c = rampColors(METRICS.find(m => m.key === b.dataset.k), false);
@@ -839,8 +841,155 @@ function setQuiet(on) {
 $('#quietBtn').onclick = () => setQuiet(!hushed());
 $('#place').onclick = () => { if (hushed()) { setQuiet(false); setTimeout(() => q.focus(), 80); } };
 addEventListener('keydown', e => {
-  if (e.key.toLowerCase() === 'q' && !e.metaKey && !e.ctrlKey && !e.altKey && !/input|textarea/i.test(document.activeElement.tagName)) setQuiet(!hushed());
+  if (e.metaKey || e.ctrlKey || e.altKey || /input|textarea/i.test(document.activeElement.tagName) || document.querySelector('dialog[open]')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'q') setQuiet(!hushed());
+  if (k === 's' && canSave()) { e.preventDefault(); openSave(); }
 });
+
+/* ───────── saving what you see ─────────
+   The view is drawn again, larger, without axis labels, and cropped to the picture.
+   A few lines of type go in the corner, in a tint of the colours underneath them. */
+
+const canSave = () => state.scale !== 'radar' && grid && bins && L;
+const saveEl = $('#save'), saveImg = $('#saveImg'), saveMeta = $('#saveMeta'), saveGo = $('#saveGo');
+let saveCanvas = null, saveBlob = null, saveUrl = '', saveFormat = store.get('saveFormat', 'jpeg');
+
+function renderView() {
+  const s = L.cell * view.k;
+  // the part of the stage the picture actually covers
+  // the field softens its outer edge on screen; a print gets clean edges, so trim that margin away
+  const inset = fieldOn() ? Math.min(0.7 * s, 14) : 0;
+  const x0 = Math.max(ML, ML + view.tx + inset), x1 = Math.min(ML + L.aw, ML + view.tx + L.cols * s - inset);
+  const y0 = Math.max(MT, MT + view.ty + inset), y1 = Math.min(MT + L.ah, MT + view.ty + L.rows * s - inset);
+  const cw = x1 - x0, ch = y1 - y0;
+  const S = Math.max(2, Math.min(4, 3600 / Math.max(cw, ch)));      // aim for about 3600 px on the long side
+  const out = document.createElement('canvas');
+  out.width = Math.round(cw * S); out.height = Math.round(ch * S);
+  const o = out.getContext('2d');
+  o.fillStyle = mode() === 'dark' ? '#171c28' : '#f4f1ea';
+  o.fillRect(0, 0, out.width, out.height);
+  const Wpx = Math.round(W * S), Hpx = Math.round(H * S);
+  if (fieldOn()) {
+    glCanvas.width = Wpx; glCanvas.height = Hpx; Field.size(Wpx, Hpx);
+    Field.draw({ dpr: S, ox: ML + view.tx, oy: MT + view.ty, s, cols: L.cols, rows: L.rows, tr: L.tr,
+      clip: [ML, MT, L.aw, L.ah], t: performance.now() / 1000, appear: 1, drift: still.matches ? 0 : Math.min(1.1, 9 / s + 0.35),
+      grain: 0.06, blur: Math.max(0.45, Math.min(3.2, 15 / s)) });
+    o.drawImage(glCanvas, x0 * S, y0 * S, cw * S, ch * S, 0, 0, out.width, out.height);
+    glCanvas.width = canvas.width; glCanvas.height = canvas.height; Field.size(canvas.width, canvas.height);
+    wakeField();
+  } else {
+    const big = document.createElement('canvas'); big.width = Wpx; big.height = Hpx;
+    const keep = [ctx, dpr, hover];
+    ctx = big.getContext('2d'); dpr = S; hover = -1;
+    ctx.setTransform(S, 0, 0, S, 0, 0);
+    drawGrid(1, true);
+    [ctx, dpr, hover] = keep;
+    o.drawImage(big, x0 * S, y0 * S, cw * S, ch * S, 0, 0, out.width, out.height);
+  }
+  return out;
+}
+
+// the colour under the type, made very light or very dark in the same hue
+function inkFor(o, x, y, w, h) {
+  const d = o.getImageData(Math.max(0, x | 0), Math.max(0, y | 0), Math.max(1, w | 0), Math.max(1, h | 0)).data;
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let i = 0; i < d.length; i += 16) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
+  r /= n * 255; g /= n * 255; b /= n * 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dd = mx - mn;
+  let hue = 0;
+  if (dd) hue = mx === r ? ((g - b) / dd) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4;
+  hue = Math.round(hue * 60 + 360) % 360;
+  const sat = dd ? dd / (1 - Math.abs(2 * l - 1)) : 0;
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const light = lum < 0.45;
+  const c = `hsl(${hue} ${Math.round(Math.min(sat, light ? 0.35 : 0.45) * 100)}% ${light ? 95 : 12}%)`;
+  const shade = `hsla(${hue} ${Math.round(Math.min(sat, 0.5) * 100)}% ${light ? 10 : 92}% / 0.45)`;
+  const avg = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},`;
+  return { c, shade, avg };
+}
+
+function caption(o) {
+  const w = o.canvas.width, h = o.canvas.height, m = metric();
+  let f = Math.max(14, Math.min(w, h) * 0.034, Math.max(w, h) * 0.011);
+  const p = state.place, lines = [];
+  lines.push({ t: p.name, size: 1.55, weight: 500 });
+  const where = [p.admin, p.country].filter(Boolean).join(', ');
+  if (where) lines.push({ t: where, size: 0.85, alpha: 0.8 });
+  lines.push({ t: $('#gist').textContent || m.name, size: 0.95, italic: true, gap: 0.45 });
+  const st = $('#story').textContent;
+  if (st) lines.push({ t: st, size: 0.85 });
+  lines.push({ t: 'weather, in dots · ERA5, ECMWF / Copernicus', size: 0.68, alpha: 0.7, gap: 0.5 });
+  const font = (l, F) => `${l.italic ? 'italic ' : ''}${l.weight || 400} ${l.size * F}px Newsreader, Georgia, serif`;
+  // shrink until the block fits comfortably
+  const widest = F => Math.max(...lines.map(l => { o.font = font(l, F); return o.measureText(l.t).width; }));
+  while (f > 10 && widest(f) > w * 0.78) f *= 0.92;
+  const pad = Math.max(16, Math.min(w, h) * 0.045);
+  const heights = lines.map(l => l.size * f * 1.32 + (l.gap || 0) * f), total = heights.reduce((a, b) => a + b, 0), bw = widest(f);
+  const right = w - pad, top = h - pad - total;
+  const ink = inkFor(o, right - bw, top, bw, total);
+  // a soft wash of the picture's own colour behind the type, so busy stripes don't fight it
+  // an ellipse that fades to nothing, so there is no edge anywhere
+  o.save();
+  o.translate(right - bw / 2, top + total / 2); o.scale(bw * 0.95, total * 1.15);
+  const g = o.createRadialGradient(0, 0, 0, 0, 0, 1);
+  g.addColorStop(0, ink.avg + '0.5)'); g.addColorStop(0.55, ink.avg + '0.3)'); g.addColorStop(1, ink.avg + '0)');
+  o.fillStyle = g; o.beginPath(); o.arc(0, 0, 1, 0, TAU); o.fill();
+  o.restore();
+  o.textAlign = 'right'; o.textBaseline = 'alphabetic';
+  o.shadowColor = ink.shade; o.shadowBlur = f * 0.6;
+  let y = top;
+  lines.forEach((l, i) => {
+    y += heights[i];
+    o.font = font(l, f); o.fillStyle = ink.c; o.globalAlpha = l.alpha || 1;
+    o.fillText(l.t, right, y - f * 0.3);
+  });
+  o.globalAlpha = 1; o.shadowBlur = 0;
+}
+
+const human = n => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB');
+function encode() {
+  const type = saveFormat === 'png' ? 'image/png' : 'image/jpeg';
+  saveMeta.textContent = 'preparing…'; saveGo.disabled = true;
+  saveCanvas.toBlob(b => {
+    saveBlob = b;
+    if (saveUrl) URL.revokeObjectURL(saveUrl);
+    saveUrl = URL.createObjectURL(b);
+    saveImg.src = saveUrl;
+    saveMeta.textContent = `${saveFormat.toUpperCase()} · ${saveCanvas.width.toLocaleString()} × ${saveCanvas.height.toLocaleString()} px · ${human(b.size)}`;
+    saveGo.disabled = false;
+  }, type, 0.93);
+  document.querySelectorAll('#saveFormat button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === saveFormat));
+}
+async function openSave() {
+  if (!canSave()) return;
+  clearHover();
+  saveEl.showModal();
+  saveMeta.textContent = 'preparing…'; saveImg.removeAttribute('src'); saveGo.disabled = true;
+  try { await Promise.all(['400 40px Newsreader', '500 40px Newsreader', 'italic 400 40px Newsreader'].map(f => document.fonts.load(f))); } catch { /* falls back to Georgia */ }
+  await new Promise(r => requestAnimationFrame(r));
+  saveCanvas = renderView();
+  caption(saveCanvas.getContext('2d'));
+  encode();
+}
+function fileName() {
+  const slug = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return ['weather-in-dots', slug(state.place.name), slug(metric().name), changing() ? 'change' : 'weather', state.scale].join('_') + (saveFormat === 'png' ? '.png' : '.jpg');
+}
+$('#saveOpen').onclick = openSave;
+$('#saveCancel').onclick = () => saveEl.close();
+saveEl.addEventListener('click', e => { if (e.target === saveEl) saveEl.close(); });
+saveEl.addEventListener('close', () => { saveCanvas = null; });
+$('#saveFormat').onclick = e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.k === saveFormat) return;
+  saveFormat = b.dataset.k; store.set('saveFormat', saveFormat); encode();
+};
+saveGo.onclick = () => {
+  if (!saveBlob) return;
+  const a = Object.assign(document.createElement('a'), { href: saveUrl, download: fileName() });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => saveEl.close(), 150);
+};
 
 $('#units').onclick = () => {
   state.units = state.units === 'us' ? 'si' : 'us'; store.set('units', state.units);

@@ -11,10 +11,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="style.css?v=2.2.0">
+<link rel="stylesheet" href="style.css?v=2.3.0">
 </head>
 <body>
 <div id="planet" aria-label="The whole planet, 1850 to last year, coloured by how far each year sat from the 20th-century average"><canvas></canvas><span></span></div>
+<button id="saveOpen" class="save-btn" title="Save this view as an image (S)"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg><span>save<span class="long"> image</span></span></button>
 <button id="quietBtn" class="switch" role="switch" aria-checked="true" title="Quiet: just the picture. Press Q to switch."><span class="track"><i></i></span><span>quiet <b id="quietState">on</b></span></button>
 <div class="app">
   <header>
@@ -65,6 +66,21 @@
   </footer>
 </div>
 
+<dialog id="save" aria-labelledby="saveTitle">
+  <div class="sheet save-sheet">
+    <header class="sheet-head">
+      <h2 id="saveTitle">save this view</h2>
+      <button id="saveCancelX" class="close" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button>
+    </header>
+    <figure class="save-preview"><img id="saveImg" alt="Preview of the image you're about to save"></figure>
+    <div class="save-row">
+      <span id="saveFormat" class="pair" aria-label="File type"><button data-k="jpeg">jpeg</button><button data-k="png">png</button></span>
+      <span id="saveMeta" class="save-meta">preparing…</span>
+      <span class="save-actions"><button id="saveCancel" class="link">cancel</button><button id="saveGo" class="solid">download</button></span>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="about" aria-labelledby="aboutTitle">
   <div class="sheet">
     <header class="sheet-head">
@@ -81,7 +97,7 @@
         <h3>how to read it</h3>
         <p>Each dot is one hour, day, week, month or year. Colours stretch across each place&rsquo;s own range, so a deep orange in Fairbanks is not the same heat as one in Houston. Hover or tap a dot for its number.</p>
         <p><i>Change</i> colours each cell by how far it sat from the same time of year in 1951–1980, the baseline NASA uses for its global temperature record. Blue and ochre are below normal; red and teal above. The years view draws them as warming stripes, after the climate scientist Ed Hawkins.</p>
-        <p><i>Field</i> lets neighbouring cells bleed into one another, like pigment, so slow patterns show through the day-to-day noise. Switch to <i>dots</i> for the exact values. <i>Quiet</i> (the switch in the corner, or the Q key) puts the controls away so the picture fills the page; click the place name to bring them back.</p>
+        <p><i>Field</i> lets neighbouring cells bleed into one another, like pigment, so slow patterns show through the day-to-day noise. Switch to <i>dots</i> for the exact values. <i>Save image</i> (or the S key) draws what you see again at print size, with the place and the numbers in the corner, and shows you a preview before it downloads. <i>Quiet</i> (the switch in the corner, or the Q key) puts the controls away so the picture fills the page; click the place name to bring them back.</p>
         <p>The hairline across the top is the whole planet, every year since 1850, from NOAA&rsquo;s <a href="https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series" target="_blank" rel="noopener">National Centers for Environmental Information</a>.</p>
         <p>The radar view shows only rain, whatever measure you pick, and only where countries share their radar: most of North America, Europe, Japan and Australia, and parts of elsewhere.</p>
         <p>A reanalysis describes a patch of sky about 25&nbsp;km across, so a dot is the weather of a neighbourhood, not of one thermometer. The newest five days are still being checked and are left out.</p>
@@ -96,9 +112,9 @@
   </div>
 </dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="radar.js?v=2.2.0"></script>
-<script src="field.js?v=2.2.0"></script>
-<script src="planet.js?v=2.2.0"></script>
-<script src="app.js?v=2.2.0"></script>
+<script src="radar.js?v=2.3.0"></script>
+<script src="field.js?v=2.3.0"></script>
+<script src="planet.js?v=2.3.0"></script>
+<script src="app.js?v=2.3.0"></script>
 </body>
 </html>
