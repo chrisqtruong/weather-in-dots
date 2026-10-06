@@ -189,12 +189,13 @@ body.on-radar #lens, body.on-radar #render, body.on-radar .zoom .sep { display: 
 
 /* the quiet switch: always in the corner, always showing its state */
 footer { justify-content: space-between; }
-.switch { position: fixed; z-index: 25; top: 24px; right: 32px; display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: 16px;
+:root { --edge: max(32px, calc((100vw - 1500px) / 2 + 32px)); }   /* the page column's right edge, even zoomed out */
+.switch { position: fixed; z-index: 25; top: 24px; right: var(--edge); display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: 16px;
   background: var(--bg); padding: 4px 2px 4px 8px; border-radius: 99px; }
 .switch b { font-weight: 500; }
 .app > header { padding-right: 270px; }
 /* save image: a quiet pill beside the switch, always there */
-.save-btn { position: fixed; z-index: 25; top: 24px; right: 148px; display: inline-flex; align-items: center; gap: 7px; font-size: 16px; color: var(--ink);
+.save-btn { position: fixed; z-index: 25; top: 24px; right: calc(var(--edge) + 116px); display: inline-flex; align-items: center; gap: 7px; font-size: 16px; color: var(--ink);
   border: 1px solid var(--rule); background: var(--bg); padding: 4px 13px 5px 10px; border-radius: 99px; transition: border-color .2s, background .2s; }
 .save-btn svg { width: 17px; height: 17px; }
 .save-btn:hover { border-color: var(--ink); }
@@ -265,6 +266,15 @@ body.is-quiet footer { justify-content: space-between; align-items: center; }
   .sheet { padding: 20px 20px 28px; max-height: 88dvh; }
   .cols { grid-template-columns: 1fr; gap: 8px; }
 }
+/* Short windows (browser zoom, small laptops, landscape phones): stop squeezing everything
+   onto one screen. The picture keeps a sensible height and the page scrolls. */
+#metrics { overflow-y: auto; scrollbar-width: none; min-height: 0; }
+@media (max-height: 640px), (max-width: 820px) and (max-height: 700px) {
+  .app { height: auto; min-height: 100dvh; }
+  #stage { height: clamp(260px, 74svh, 760px); }
+  body.is-quiet #stage { height: clamp(260px, 82svh, 900px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }

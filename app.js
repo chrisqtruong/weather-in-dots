@@ -679,9 +679,8 @@ canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && 
 // Each gesture keeps one meaning from start to finish, so momentum doesn't flip it halfway.
 let wheelKind = 'pan', wheelAt = 0;
 canvas.addEventListener('wheel', e => {
-  e.preventDefault();
   const { x, y } = xy(e), now = performance.now();
-  if (e.ctrlKey) zoomAt(x, y, Math.exp(-e.deltaY * 0.012));          // pinch (and ctrl + wheel)
+  if (e.ctrlKey) { e.preventDefault(); zoomAt(x, y, Math.exp(-e.deltaY * 0.012)); }   // pinch (and ctrl + wheel)
   else {
     if (now - wheelAt > 220) {
       const fine = e.deltaMode === 0 && (e.deltaX !== 0 || !Number.isInteger(e.deltaY) || Math.abs(e.deltaY) < 50);
@@ -690,8 +689,12 @@ canvas.addEventListener('wheel', e => {
     if (wheelKind === 'pan') {
       let dx = -e.deltaX, dy = -e.deltaY;
       if (e.shiftKey && !dx) { dx = dy; dy = 0; }                      // shift + scroll goes sideways
+      const was = L ? view.tx + ',' + view.ty : '';
       pan(dx, dy);
-    } else zoomAt(x, y, Math.exp(-e.deltaY * 0.0022));
+      // nothing left to move this way: let the page itself scroll (it does when the window is short)
+      if (L && view.tx + ',' + view.ty === was && Math.abs(dy) > Math.abs(dx)) { wheelAt = now; return; }
+      e.preventDefault();
+    } else { e.preventDefault(); zoomAt(x, y, Math.exp(-e.deltaY * 0.0022)); }
   }
   wheelAt = now;
   if (!tip.hidden) readAt(x, y);
